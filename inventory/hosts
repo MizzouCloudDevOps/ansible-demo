@@ -1,0 +1,6 @@
+[local]
+ansibleEngine ansible_connection=local
+
+[nodes]
+node1 ansible_host="node1_ip" 
+node2 ansible_host="node2_ip"

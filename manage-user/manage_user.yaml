@@ -1,0 +1,56 @@
+# The following create and allow an ansibledevops user on remote hosts
+---
+- name: create a user on all hosts
+  hosts: nodes
+  remote_user: ec2-user
+  become: yes 
+  gather_facts: no
+
+  vars:
+    - ansible_ssh_public_key_file: /home/ec2-user/.ssh/"Your_Public_Key"
+    - user: ansibledevops
+  tasks:
+    - name: Create a login user
+      user:
+        name: "{{ user }}"
+        shell: /bin/bash
+        state: present
+    
+    - name: add public key to authorized_key
+      authorized_key: 
+        user: "{{ user }}"
+        state: present
+        key: "{{ lookup('file', '{{ ansible_ssh_public_key_file }}') }}"
+
+    - name: Deny root from logging in 
+      ansible.builtin.lineinfile:
+        dest: /etc/ssh/sshd_config
+        regexp: '^(#)?PermitRootLogin \w*$'
+        line: 'PermitRootLogin no'
+        state: present
+      notify:
+       - restart ssh
+
+    - name: allow specific user to login
+      ansible.builtin.lineinfile:
+        dest: /etc/ssh/sshd_config
+        regexp: '^AllowUsers'
+        line: 'AllowUsers {{ user }}'
+        state: present 
+      notify:
+       - restart ssh
+
+    - name: add {{user }} to sudoers file 
+      ansible.builtin.lineinfile:
+        path: /etc/sudoers
+        regexp: '^{{ user }}'
+        line: '{{ user }} ALL=(ALL) NOPASSWD: ALL'
+        validate: 'visudo -cf %s' 
+      notify:
+       - restart ssh
+            
+  handlers:
+    - name: restart ssh
+      ansible.builtin.service:
+        name: sshd
+        state: restarted
