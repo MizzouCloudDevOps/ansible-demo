@@ -1,0 +1,162 @@
+---
+- name: Audit
+  user: ansibledevops
+  hosts: node1
+  become: yes
+  tasks:
+    - name: Hostname
+      shell:
+        hostname
+      register: hostname
+    - debug:
+        msg: "{{hostname.stdout}}"
+
+    - name: Current date and time
+      shell:
+        date
+      register: date
+    - debug:
+        msg: "{{date.stdout}}"
+
+    - name: Operating System Information
+      shell:
+        cat /etc/os-release
+      register: os_info
+    - debug:
+        msg: "{{os_info.stdout_lines}}"
+
+    - name: System Uptime
+      shell:
+        uptime
+      register: uptime
+    - debug:
+        msg: "{{uptime.stdout}}"
+    - name: CPU Model
+      shell:
+        cat /proc/cpuinfo | grep name | cut -d':' -f2
+      register: cpumodel
+    - debug:
+        msg: "{{cpumodel.stdout}}"
+
+    - name: CPU Speed
+      shell:
+        cat /proc/cpuinfo | grep MHz | cut -d':' -f2
+      register: cpuspeed
+    - debug:
+        msg: "{{cpuspeed.stdout}}"
+
+    - name: CPU Cores
+      shell:
+        cat /proc/cpuinfo | grep cores | cut -d':' -f2
+      register: cpucores
+    - debug:
+        msg: "{{cpucores.stdout}}"
+
+    - name: Total Physicall Memory
+      shell:
+        free -m | grep Mem | tr -s ' ' | cut -d ' ' -f2
+      register: totalmemory
+    - debug:
+        msg: "{{totalmemory.stdout}}"
+    - name: Used Physicall Memory
+      shell:
+        free -m | grep Mem | tr -s ' ' | cut -d ' ' -f3
+      register: usedmemory
+    - debug:
+        msg: "{{usedmemory.stdout}}"
+
+    - name: List of users created after Linux installation
+      shell:
+        " awk -F: '($3>999 && $3<65534) {print $1}' /etc/passwd "
+      register: userslist
+    - debug:
+        msg: "{{userslist.stdout}}"
+
+    - name: List of users with Sudo access
+      shell:
+        " sudo grep '^sudo:.*$' /etc/group | cut -d: -f4 "
+      register: usersWithSudoAccess
+    - debug:
+        msg: "{{usersWithSudoAccess.stdout}}"
+
+    - name: Groups information
+      shell:
+        " awk -F: '($3>999 && $3<65534) {print $1 $3 $4}' /etc/group "
+      register: GroupsInformation
+    - debug:
+        msg: "{{GroupsInformation.stdout}}"
+
+    - name: Groups in Sudoers
+      shell:
+        " sudo cat /etc/sudoers | awk '{print $1}' | grep % "
+      register: GroupsInSudoers
+    - debug:
+        msg: "{{GroupsInSudoers.stdout}}"
+
+    - name: Information on the installed physical disks on a system
+      shell:
+        " sudo fdisk -l | head -2 | grep Disk "
+      register: installedPhysicalDisks
+    - debug:
+        msg: "{{installedPhysicalDisks.stdout}}"
+
+    - name: Information on the installed physical partitions on a system
+      shell:
+        sudo fdisk -l | tail -8 | awk '/dev/ { print $1 " " $5 " " $7 }'
+      register: installedPhysicalPartitions
+    - debug:
+        msg: "{{installedPhysicalPartitions.stdout}}"
+
+    - name: Information on the available free disk space on a system
+      shell:
+        sudo df -h | awk '{if ($1 != "Filesystem" && $1 != "none") print $1 " " $5}'
+      register: availableFreeDiskSpace
+    - debug:
+        msg: "{{availableFreeDiskSpace.stdout}}"
+
+    - name: IP Addresses
+      shell:
+        " ifconfig | grep broadcast | tr -s ' ' | cut -d' ' -f3 "
+      register: IPAddresses
+    - debug:
+        msg: "{{IPAddresses.stdout}}"
+    - name: IP Routing Table
+      shell:
+        route
+      register: IPRoutingTable
+    - debug:
+        msg: "{{IPRoutingTable.stdout}}"
+
+    - name: Install Nmap
+      yum:
+        name:
+          - nmap
+        state: latest
+
+    - name: Scanning Open Ports
+      shell:
+        nmap -sT -p- 127.0.0.1 | sed 1,4d
+      register: ScanningOpenPorts
+    - debug:
+        msg: "{{ScanningOpenPorts.stdout}}"
+
+    - name: Audit Established SSH connections
+      shell:
+        sudo lsof -i -n -P | grep sshd | grep IPv4 | grep ESTABLISHED
+      register: AuditSSHConnections
+    - debug:
+        msg: "{{AuditSSHConnections.stdout}}"
+
+    - name: Audit Daemons logs
+      shell:
+        sudo aureport -ts this-month -te now --summary -i | grep failed
+      register: AuditDaemonsLogs
+    - debug:
+        msg: "{{AuditDaemonsLogs.stdout}}"
+
+    - name: List System services
+      shell:
+        sudo systemctl list-units --type=service | grep running
+      register: ListSystemServices
+    - debug:
+        msg: "{{ListSystemServices.stdout}}"
