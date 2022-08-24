@@ -1,7 +1,7 @@
 # The following create and allow an ansibledevops user on remote hosts
 ---
 - name: create a user on all hosts
-  hosts: node2
+  hosts: nodes
   remote_user: ec2-user
   become: yes 
   gather_facts: no
@@ -27,14 +27,14 @@
 
     - name: Upload the public SSH key to remote servers
       copy:
-        src: /home/ec2-user/.ssh/id_rsa.pub
-        dest: /home/ansibledevops/.ssh/id_rsa.pub
+        src: /home/ec2-user/.ssh/{{ ansible_ssh_public_key_file }}
+        dest: /home/ansibledevops/.ssh/{{ ansible_ssh_public_key_file }}
         owner: ansibledevops
         group: ansibledevops
         mode: '0766'
 
     - name: add the public key into Authorized_keys file to enable Key Auth
-      shell: "cat /home/ansibledevops/.ssh/id_rsa.pub >> /home/ansibledevops/.ssh/authorized_keys &&
+      shell: "cat /home/ansibledevops/.ssh/'{{ ansible_ssh_public_key_file }}' >> /home/ansibledevops/.ssh/authorized_keys &&
        chmod 600 /home/ansibledevops/.ssh/authorized_keys && 
        chown ansibledevops:ansibledevops /home/ansibledevops/.ssh/authorized_keys"
 
