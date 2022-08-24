@@ -1,26 +1,42 @@
 # The following create and allow an ansibledevops user on remote hosts
 ---
 - name: create a user on all hosts
-  hosts: nodes
+  hosts: node2
   remote_user: ec2-user
   become: yes 
   gather_facts: no
 
   vars:
-    - ansible_ssh_public_key_file: /home/ec2-user/.ssh/"Your_Public_Key"
+    - ansible_ssh_public_key_file: /home/ansibledevops/.ssh/id_rsa.pub
     - user: ansibledevops
   tasks:
     - name: Create a login user
       user:
         name: "{{ user }}"
         shell: /bin/bash
+        createhome: yes
+        home: /home/ansibledevops
         state: present
-    
-    - name: add public key to authorized_key
-      authorized_key: 
-        user: "{{ user }}"
-        state: present
-        key: "{{ lookup('file', '{{ ansible_ssh_public_key_file }}') }}"
+   
+    - file:
+        path: /home/ansibledevops/.ssh
+        state: directory
+        owner: ansibledevops
+        group: ansibledevops
+        mode: '0700'
+
+    - name: Upload the public SSH key to remote servers
+      copy:
+        src: /home/ec2-user/.ssh/id_rsa.pub
+        dest: /home/ansibledevops/.ssh/id_rsa.pub
+        owner: ansibledevops
+        group: ansibledevops
+        mode: '0766'
+
+    - name: add the public key into Authorized_keys file to enable Key Auth
+      shell: "cat /home/ansibledevops/.ssh/id_rsa.pub >> /home/ansibledevops/.ssh/authorized_keys &&
+       chmod 600 /home/ansibledevops/.ssh/authorized_keys && 
+       chown ansibledevops:ansibledevops /home/ansibledevops/.ssh/authorized_keys"
 
     - name: Deny root from logging in 
       ansible.builtin.lineinfile:
@@ -28,15 +44,6 @@
         regexp: '^(#)?PermitRootLogin \w*$'
         line: 'PermitRootLogin no'
         state: present
-      notify:
-       - restart ssh
-
-    - name: allow specific user to login
-      ansible.builtin.lineinfile:
-        dest: /etc/ssh/sshd_config
-        regexp: '^AllowUsers'
-        line: 'AllowUsers {{ user }}'
-        state: present 
       notify:
        - restart ssh
 
