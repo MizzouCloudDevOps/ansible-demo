@@ -215,7 +215,7 @@
     - name: append
       lineinfile:
         dest: "{{ destination }}"
-        line: "========== LIST OF USERS CREATED AFTER LINUS INSTALLATION =========="
+        line: "========== LIST OF USERS CREATED AFTER LINUX INSTALLATION =========="
         insertafter: OEF
       delegate_to: localhost
 
